@@ -1,0 +1,69 @@
+#define function helloWorld() view returns(string)
+
+#define macro MAIN() = takes(0) returns(0) {
+  /** 
+    @notice get function selector 
+  **/           // STACK
+  0x00          // [0x00]
+  calldataload  // [0xc605f76c0000000000...000]
+  0xE0          // [0xE0 ,0xc605f76c0000000000...000]
+  shr           // [0xc605f76c]
+
+  /** 
+    @notice if the function signature matches jump to helloWorld 
+  **/
+  __FUNC_SIG(helloWorld) eq helloWorld jumpi
+
+  /** 
+    @notice hardcode the helloWorld function bytecode 
+  **/
+  helloWorld:
+      HELLO_WORLD()
+}
+
+#define macro HELLO_WORLD() = takes(0) returns(0) {
+  /** 
+    @notice strings are dynamic elements, to return 
+            a string we need to store three params in memory
+            - memory offset
+            - bytes length
+            - values
+  **/
+
+  /** 
+    @notice store the memory offset of 0x20 at 0x00
+  **/     // STACK
+  0x20    // [0x20]
+  0x00    // [0x00, 0x20]
+  mstore  // [] -> MEMORY 0x0000...0020
+
+  /** 
+    @notice store the length of 0x0d at 0x20
+  **/     // STACK
+  0x0d    // [0x0d]
+  0x20    // [0x20, 0x0d]
+  mstore  // [] -> MEMORY 0x0000...0020
+          //                0000...000d
+  
+  /** 
+    @notice store the string value of 0x48656c6c6f2c20776f726c6421 at 0x40
+  **/                                       // STACK
+  __RIGHTPAD(0x48656c6c6f2c20776f726c6421)  // [0x4865...0000]
+  0x40                                      // [0x4865...0000, 0x40]
+  mstore                                    // [] -> MEMORY 0x0000...0020
+                                            //                0000...000d
+                                            //                4865...0000
+
+  /**
+    @notice return the 96 bytes
+  **/     // STACK
+  0x60    // [0x60]
+  0x00    // [0x00, 0x60]
+  return  // []
+}
+
+// 0x000000000000000000000000000000000000000d48656c6c6f2c20776f726c6421
+
+// 0000000000000000000000000000000000000000000000000000000000000020
+// 000000000000000000000000000000000000000000000000000000000000000d
+// 48656c6c6f2c20776f726c642100000000000000000000000000000000000000

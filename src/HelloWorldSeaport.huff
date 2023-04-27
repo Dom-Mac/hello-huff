@@ -1,0 +1,70 @@
+#define function helloWorld() view returns(string)
+
+#define macro MAIN() = takes(0) returns(0) {
+  /** 
+    @notice get function selector 
+  **/           // STACK
+  0x00          // [0x00]
+  calldataload  // [0xc605f76c0000000000...000]
+  0xE0          // [0xE0 ,0xc605f76c0000000000...000]
+  shr           // [0xc605f76c]
+
+  /** 
+    @notice if the function signature matches jump to helloWorld 
+  **/
+  __FUNC_SIG(helloWorld) eq helloWorld jumpi
+
+  /** 
+    @notice hardcode the helloWorld function bytecode 
+  **/
+  helloWorld:
+      HELLO_WORLD()
+}
+
+#define macro HELLO_WORLD() = takes(0) returns(0) {
+  /** 
+    @notice strings are dynamic elements, to return 
+            a string we need to store three params in memory
+            - memory offset
+            - bytes length
+            - values
+  **/
+
+  /** 
+    @notice store the memory offset of 0x20 at 0x00
+  **/     // STACK
+  0x20    // [0x20]
+  0x00    // [0x00, 0x20]
+  mstore  // [] -> MEMORY 0x0000...0020
+  
+  /** 
+    @notice store in memory two values using only one mstore encoding
+              - the length of the string 0x0d
+              - sting ASCII 0x48656c6c6f2c20776f726c6421
+              -> 0x0d48656c6c6f2c20776f726c6421
+            This is doable because the first two out of three values to be read
+            are left padded, the third one is right padded being in bytes.
+            Second and third value can be stored with only one instruction,
+            using 0x2d as offset, so that:
+             - 0x0d is the left most byte of the second word
+             - 0x48656c6c6f2c20776f726c6421 is the right most value of the third word
+  **/                                       // STACK
+  __LEFTPAD(0x0d48656c6c6f2c20776f726c6421) // [0x4865...0000]
+  0x2d                                      // [0x4865...0000, 0x40]
+  mstore                                    // [] -> MEMORY 0x0000...0020
+                                            //                0000...000d
+                                            //                4865...0000
+
+  /**
+    @notice return the 96 bytes
+  **/     // STACK
+  0x60    // [0x60]
+  0x00    // [0x00, 0x60]
+  return  // []
+}
+
+// 0x000000000000000000000000000000000000000d48656c6c6f2c20776f726c6421
+
+// 0000000000000000000000000000000000000000000000000000000000000020
+// 000000000000000000000000000000000000000000000000000000000000000d
+// 48656c6c6f2c20776f726c642100000000000000000000000000000000000000
