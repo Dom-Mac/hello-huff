@@ -1,0 +1,50 @@
+/** Interface **/
+#define function setValue(uint256) nonpayable returns
+#define function getValue() view returns (uint256)
+
+/** Storage **/
+#define constant VALUE_LOCATION =  FREE_STORAGE_POINTER()
+
+/** Methods **/
+#define macro SET_VALUE() = takes (0) returns (0) {
+  0x04 calldataload   // [value]
+  [VALUE_LOCATION]    // [pointer, value]
+  sstore
+}
+
+#define macro GET_VALUE() = takes (0) returns (0) {
+  [VALUE_LOCATION]   // [pointer]
+  sload              // [value]
+  0x00 mstore
+  0x20 0x00 return
+}
+
+#define macro FALLBACK() = takes (0) return (0) {
+  0x01 0x00 mstore
+  0x20 0x00 return
+}
+
+#define macro RECEIVE() = takes (0) return (0) {
+  0x01 0x00 mstore
+  0x20 0x00 return
+}
+
+#define macro MAIN() = takes (0) returns (0) {
+  0x00 calldataload 0xE0 shr
+  
+  dup1 __FUNC_SIG(getValue) eq get jumpi
+  dup1 __FUNC_SIG(setValue) eq set jumpi
+
+  /**
+    @notice jump to receive if msg.value != 0 
+    @dev What if there is a payable function call? 
+  **/
+  callvalue receive jumpi
+
+  receive:
+    RECEIVE()
+  get: 
+    GET_VALUE()
+  set: 
+    SET_VALUE()
+}
